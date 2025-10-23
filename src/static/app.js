@@ -25,6 +25,17 @@ document.addEventListener("DOMContentLoaded", () => {
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <p><strong>Participants:</strong></p>
+          <ul class="participants-list">
+            ${details.participants
+              .map(
+                (participant) =>
+                  `<li class="participant-item"><span class="participant-email">${participant}</span><button class="unregister-btn" data-activity="${encodeURIComponent(
+                    name
+                  )}" data-email="${encodeURIComponent(participant)}" title="Unregister">✖</button></li>`
+              )
+              .join("")}
+          </ul>
         `;
 
         activitiesList.appendChild(activityCard);
@@ -35,6 +46,37 @@ document.addEventListener("DOMContentLoaded", () => {
         option.textContent = name;
         activitySelect.appendChild(option);
       });
+
+        // Attach unregister handlers (event delegation)
+        activitiesList.addEventListener("click", async (e) => {
+          const btn = e.target.closest(".unregister-btn");
+          if (!btn) return;
+
+          const activityName = decodeURIComponent(btn.dataset.activity);
+          const email = decodeURIComponent(btn.dataset.email);
+
+          if (!confirm(`Unregister ${email} from ${activityName}?`)) return;
+
+          try {
+            const resp = await fetch(`/activities/${encodeURIComponent(activityName)}/unregister?email=${encodeURIComponent(
+              email
+            )}`, {
+              method: "POST",
+            });
+
+            const res = await resp.json();
+
+            if (resp.ok) {
+              // Refresh activities to update UI
+              fetchActivities();
+            } else {
+              alert(res.detail || "Failed to unregister");
+            }
+          } catch (err) {
+            console.error("Error unregistering:", err);
+            alert("Failed to unregister. See console for details.");
+          }
+        });
     } catch (error) {
       activitiesList.innerHTML = "<p>Failed to load activities. Please try again later.</p>";
       console.error("Error fetching activities:", error);
